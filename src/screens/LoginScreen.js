@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { globalStyles, colors } from '../styles/globalStyles';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // Import Icon
 
 export default function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -34,33 +35,52 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={[globalStyles.container, styles.container]}>
-      <Text style={[globalStyles.title, styles.title]}>Welcome Back!</Text>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      <TextInput
-        style={styles.input}
-        placeholder="Phone Number (e.g., 1234567890)"
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
-        keyboardType="phone-pad"
-        placeholderTextColor={colors.textSecondary}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password (e.g., password)"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholderTextColor={colors.textSecondary}
-      />
-      {isLoading ? (
-        <ActivityIndicator size="large" color={colors.primary} style={styles.buttonSpacing} />
-      ) : (
-        <View style={styles.buttonSpacing}>
-           <Button title="Login" onPress={handleLogin} color={colors.primary} disabled={isLoading} />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.keyboardAvoidingContainer}
+    >
+      <ScrollView contentContainerStyle={[globalStyles.container, styles.scrollContainer]}>
+        <View style={styles.logoContainer}>
+          {/* You can replace this Text with an actual Image logo */}
+          <Icon name="parking" size={60} color={colors.primary} />
+          <Text style={styles.appName}>Parkwise</Text>
         </View>
-      )}
-    </View>
+
+        <Text style={styles.welcomeText}>Welcome Back!</Text>
+        <Text style={styles.signInText}>Sign in to continue</Text>
+
+        {error ? <Text style={globalStyles.errorText}>{error}</Text> : null}
+
+        <View style={styles.inputContainer}>
+          <Icon name="phone-outline" size={22} color={colors.textSecondary} style={styles.inputIcon} />
+          <TextInput
+            style={[globalStyles.input, styles.inputField]} // Use global style, add specific overrides
+            placeholder="Phone Number" // Simplified placeholder
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
+            placeholderTextColor={colors.textSecondary}
+            maxLength={10} // Example: Set max length if applicable
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Icon name="lock-outline" size={22} color={colors.textSecondary} style={styles.inputIcon} />
+          <TextInput
+            style={[globalStyles.input, styles.inputField]}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholderTextColor={colors.textSecondary}
+          />
+        </View>
+
+        <TouchableOpacity style={[globalStyles.button, styles.loginButton]} onPress={handleLogin} disabled={isLoading}>
+          {isLoading ? <ActivityIndicator size="small" color={colors.white} /> : <Text style={globalStyles.buttonText}>Login</Text>}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -68,28 +88,59 @@ const styles = StyleSheet.create({
   container: {
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 30, // Add more horizontal padding for login screen
   },
-  title: {
+  keyboardAvoidingContainer: {
+    flex: 1,
+    backgroundColor: colors.background, // Match background
+  },
+  scrollContainer: {
+    flexGrow: 1, // Ensure content can grow to fill space
+    justifyContent: 'center', // Center content vertically
+    alignItems: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  appName: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.primary,
+    marginTop: 10,
+    // fontFamily: 'YourBrandFont-Bold', // Apply custom font if you have one
+  },
+  welcomeText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  signInText: {
+    fontSize: 16,
+    color: colors.textSecondary,
     marginBottom: 30,
   },
-  input: {
-    width: '90%',
-    height: 50,
-    borderColor: colors.border,
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%', // Use full width from globalStyles.input
+    backgroundColor: colors.surface, // Background for the whole container
+    borderRadius: 8, // Match input border radius
+    marginBottom: 15, // Spacing between inputs
+    borderColor: colors.border, // Add border to the container
     borderWidth: 1,
-    marginBottom: 15,
+  },
+  inputIcon: {
     paddingHorizontal: 15,
-    borderRadius: 8,
-    fontSize: 16,
-    backgroundColor: colors.surface,
   },
-  buttonSpacing: {
-    marginTop: 10,
-    width: '90%',
+  inputField: {
+    flex: 1, // Take remaining space
+    borderWidth: 0, // Remove individual border, container has it now
+    marginBottom: 0, // Remove margin from global style if needed
+    paddingHorizontal: 0, // Adjust padding as icon provides left padding
   },
-  errorText: {
-    color: colors.error,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
+  loginButton: {
+    marginTop: 20, // Space above the button
+  }
 });

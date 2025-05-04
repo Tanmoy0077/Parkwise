@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 // import AsyncStorage from '@react-native-async-storage/async-storage'; // Or your preferred storage
-import { loginUser, getUserData, logoutUser } from '../services/Service'; // Import API functions
+import { loginUser, getUserData, logoutUser, getCardBalance } from '../services/Service'; // Import API functions
 
 const AuthContext = createContext(null);
  
@@ -41,12 +41,28 @@ export const AuthProvider = ({ children }) => {
 
       if (loginSuccess) {
         // Step 2: If login succeeded, fetch user data via the service
-        console.log('Login successful, fetching user data...');
-        const userData = await getUserData(); // Service handles errors internally or throws
+        console.log('Login successful, fetching user data and balance...');
+        // Fetch user data (which includes name and cycles according to the new structure)
+        const userDataResponse = await getUserData();
+        // Fetch card balance separately (assuming it's still a separate endpoint)
+        const balance = await getCardBalance();
         
         // Step 3: Update state if data fetch is successful
+        // Extract data based on the new structure
+        const userName = userDataResponse?.name;
+        // console.log(userName);
+        const userCycles = userDataResponse?.bicycles || [];
+        console.log(userCycles);
+        // Format the user object for the context state
+        const formattedUser = {
+          name: userName || 'User', // Use extracted name or default
+          phoneNumber: phoneNumber, // Add the phone number used for login
+          walletBalance: balance, // Add the fetched balance
+          bicycles: userCycles
+        };
+
         setUserToken('loggedIn');
-        setUser(userData);
+        setUser(formattedUser);
         // Optional: await AsyncStorage.setItem('userToken', 'loggedIn');
         return true; // Indicate overall success
       } else {

@@ -80,8 +80,7 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     setIsLoading(true); // Optional: show loading during logout
-    await logoutUser(); // Call the logout service function
-    // Clear local state regardless of API call success/failure
+    await logoutUser();
     setUserToken(null);
     setUser(null);
     // Optional: Clear stored token/flag

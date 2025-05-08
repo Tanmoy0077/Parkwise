@@ -15,9 +15,9 @@ import {
 import { globalStyles } from "../styles/globalStyles";
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../styles/globalStyles"; // Import colors if needed for styling
-import Icon from "react-native-vector-icons/MaterialCommunityIcons"; // Example using MaterialCommunityIcons
-import { Camera, CameraType, BarCodeType, CameraView } from "expo-camera"; // Import specific types
-import { updateBicycleZone } from "../services/Service"; // Import the new service function
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { Camera, CameraView } from "expo-camera"; // Import specific types
+import { updateBicycleZone, exitBicycle } from "../services/Service"; // Assume exitBicycle for exiting
 
 export default function HomeScreen() {
   // Get user data from context
@@ -31,6 +31,10 @@ export default function HomeScreen() {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false); // To prevent multiple scans
   const [isUpdatingZone, setIsUpdatingZone] = useState(false); // State for update loading
+  // --- New state for Exit Bicycle functionality ---
+  const [isExitModalVisible, setIsExitModalVisible] = useState(false);
+  const [bicycleToExitId, setBicycleToExitId] = useState(null);
+  const [isExiting, setIsExiting] = useState(false); // Loading state for exit process
 
   // --- Camera Permission Logic (Moved Before Early Return) ---
   useEffect(() => {
@@ -60,12 +64,47 @@ export default function HomeScreen() {
         color={colors.primary}
         style={styles.bikeIcon}
       />
-      <View style={styles.bicycleTextContainer}>
+      <View style={styles.bicycleInfoContainer}>
         <Text style={styles.bicycleId}>ID: {item._id}</Text>
         <Text style={styles.bicycleZone}>Zone: {item.zone || "N/A"}</Text>
       </View>
+      {item.zone && item.zone !== "N/A" && item.zone !== "offline" && (
+        <TouchableOpacity
+          style={styles.exitButton}
+          onPress={() => promptExitConfirmation(item._id)}
+          // Disable button if any exit is in progress or if the zone is offline
+          disabled={isExiting || item.zone === "offline"}
+        >
+          <Icon name="logout" size={18} color={colors.onSecondary} />
+          <Text style={styles.exitButtonText}>Pay & Exit</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
+  // To visually indicate that the button is disabled when the zone is offline,
+  // you might want to add a specific style for it.
+  // For example, in your styles:
+  // disabledExitButton: {
+  //   backgroundColor: colors.lightGray, // Or any other color indicating disabled state
+  //   opacity: 0.6,
+  // },
+  // And then in the TouchableOpacity:
+  // style={[styles.exitButton, item.zone === "offline" && styles.disabledExitButton]}
+  // However, the existing `disabled` prop usually handles opacity changes automatically in React Native.
+  // The primary change is in the conditional rendering and the `disabled` prop logic.
+
+  // --- Exit Bicycle Logic ---
+  const promptExitConfirmation = (bicycleId) => {
+    setBicycleToExitId(bicycleId);
+    setIsExitModalVisible(true);
+  };
+
+  const handleCancelExit = () => {
+    setIsExitModalVisible(false);
+    setBicycleToExitId(null);
+  };
+
+
 
   // --- QR Code Scanning Logic ---
 
@@ -178,64 +217,100 @@ export default function HomeScreen() {
     }
   };
 
+  const handleConfirmExit = async () => {
+    if (!bicycleToExitId) return;
+
+    setIsExitModalVisible(false); // Close modal first
+    setIsExiting(true); // Start loading state
+
+    try {
+      // const success = await exitBicycle(bicycleToExitId); // Actual API call
+      // Mocking the API call for demonstration:
+      console.log(`Simulating exit for bicycle: ${bicycleToExitId}`);
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+      const mockSuccess = true; // Assume success for this example
+
+      if (mockSuccess) {
+        Alert.alert(
+          "Success",
+          `Bicycle ${bicycleToExitId} exited successfully.`
+        );
+        await refreshUserData(); // Refresh user data to reflect the change
+      } else {
+        Alert.alert(
+          "Exit Failed",
+          "Could not exit the bicycle. Please try again."
+        );
+      }
+    } catch (error)
+    {
+      console.error("Exit bicycle error:", error);
+      Alert.alert(
+        "Error",
+        "An unexpected error occurred while exiting the bicycle."
+      );
+    } finally {
+      setIsExiting(false);
+      setBicycleToExitId(null); // Clear the selected bicycle for exit
+    }
+  };
+
+
   return (
-    // Use ScrollView if content might exceed screen height
-    <ScrollView
-      style={globalStyles.container}
-      contentContainerStyle={styles.scrollContainer}
-    >
-      <View style={styles.header}>
-        {/* Placeholder for User Avatar */}
-        <Image // Use require for local default asset
-          source={require("../../assets/boy.png")} // Adjust path if needed
-          style={styles.avatar}
-        />
-        <Text style={styles.greeting}>Hello, {user.name || "User"}!</Text>
-      </View>
-
-      <View style={styles.infoBox}>
-        <Icon name="wallet-outline" size={30} color={colors.primary} />
-        <View style={styles.infoTextContainer}>
-          <Text style={styles.infoTitle}>Wallet Balance</Text>
-          {/* Changed currency symbol */}
-          <Text style={styles.infoValue}>
-            ₹{user.walletBalance?.toFixed(2) ?? "0.00"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Show indicator while updating zone */}
-      {isUpdatingZone && (
-        <ActivityIndicator
-          size="small"
-          color={colors.primary}
-          style={styles.updateIndicator}
-        />
-      )}
-
-      {/* QR Code Scan Button */}
-      <TouchableOpacity
-        style={styles.scanButton}
-        onPress={handleScanButtonPress}
+    <View style={styles.screenWrapper}>
+      <ScrollView
+        style={styles.scrollViewStyle}
+        contentContainerStyle={[globalStyles.container, styles.scrollContainer]}
       >
-        <Icon name="qrcode-scan" size={24} color={colors.white} />
-        <Text style={styles.scanButtonText}>Scan QR to Park</Text>
-      </TouchableOpacity>
-
-      {/* Display Bicycles and Zones */}
-      <View style={styles.bicycleListContainer}>
-        <Text style={styles.listTitle}>Your Bicycles</Text>
-        {user.bicycles && user.bicycles.length > 0 ? (
-          <FlatList // FlatList inside ScrollView needs careful handling or fixed height, but for short lists it's often okay.
-            data={user.bicycles}
-            renderItem={renderBicycleItem}
-            keyExtractor={(item) => String(item._id)} // Use bicycle ID as the key
-            scrollEnabled={false} // Disable FlatList scrolling if ScrollView handles it
+        <View style={styles.header}>
+          <Image
+            source={require("../../assets/boy.png")}
+            style={styles.avatar}
           />
-        ) : (
-          <Text style={styles.noBicyclesText}>No bicycles registered.</Text>
+          <Text style={styles.greeting}>Hello, {user.name || "User"}!</Text>
+        </View>
+
+        <View style={styles.infoBox}>
+          <Icon name="wallet-outline" size={30} color={colors.primary} />
+          <View style={styles.infoTextContainer}>
+            <Text style={styles.infoTitle}>Wallet Balance</Text>
+            <Text style={styles.infoValue}>
+              ₹{user.walletBalance?.toFixed(2) ?? "0.00"}
+            </Text>
+          </View>
+        </View>
+
+        {isUpdatingZone && (
+          <ActivityIndicator
+            size="small"
+            color={colors.primary}
+            style={styles.updateIndicator}
+          />
         )}
-      </View>
+
+        <TouchableOpacity
+          style={styles.scanButton}
+          onPress={handleScanButtonPress}
+          disabled={isExiting} // Disable if exiting
+        >
+          <Icon name="qrcode-scan" size={24} color={colors.white} />
+          <Text style={styles.scanButtonText}>Scan QR to Park</Text>
+        </TouchableOpacity>
+
+        <View style={styles.bicycleListContainer}>
+          <Text style={styles.listTitle}>Your Bicycles</Text>
+          {user.bicycles && user.bicycles.length > 0 ? (
+            <FlatList
+              data={user.bicycles}
+              renderItem={renderBicycleItem}
+              keyExtractor={(item) => String(item._id)}
+              scrollEnabled={false}
+            />
+          ) : (
+            <Text style={styles.noBicyclesText}>No bicycles registered.</Text>
+          )}
+        </View>
+      </ScrollView>
 
       {/* --- Bicycle Selection Modal --- */}
       <Modal
@@ -296,21 +371,7 @@ export default function HomeScreen() {
               facing="back" // Use imported CameraType
               onBarcodeScanned={scanned ? undefined : handleBarCodeScanned} // Only scan if not already scanned
               barcodeScannerSettings={{
-                barcodeTypes: [
-                  "aztec",
-                  "ean13",
-                  "ean8",
-                  "qr",
-                  "pdf417",
-                  "upc_e",
-                  "datamatrix",
-                  "code39",
-                  "code93",
-                  "itf14",
-                  "codabar",
-                  "code128",
-                  "upc_a",
-                ],
+                barcodeTypes: ["qr"],
               }}
             />
           )}
@@ -323,13 +384,66 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
-    </ScrollView>
+
+      {/* --- Exit Confirmation Modal --- */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isExitModalVisible}
+        onRequestClose={() => {
+          if (isExiting) return; // Prevent closing if processing
+          handleCancelExit();
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirm Exit & Pay</Text>
+            {bicycleToExitId && (
+              <Text style={styles.modalMessage}>
+                Are you sure you want to proceed with payment and exit for Bicycle ID: {bicycleToExitId}?
+              </Text>
+            )}
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={handleCancelExit}
+                disabled={isExiting}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.secondary }, isExiting ? styles.disabledButton : {}]}
+                onPress={handleConfirmExit}
+                disabled={isExiting}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.onSecondary }]}>Confirm & Pay</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Loading overlay for exit operation */}
+      {isExiting && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingOverlayText}>Processing Exit...</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   scrollContainer: {
     paddingBottom: 20, // Add padding at the bottom if using ScrollView
+  },
+  screenWrapper: { // New wrapper for ScrollView and Overlay
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollViewStyle: { // Style for scroll view itself
+    flex: 1,
   },
   greeting: {
     fontSize: 24,
@@ -399,12 +513,11 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 15,
     borderRadius: 6,
-    marginBottom: 8,
+    marginBottom: 10, // Increased margin a bit
     flexDirection: "row",
     alignItems: "center",
-    // Add subtle border (optional)
-    // borderColor: colors.border,
-    // borderWidth: 1,
+    justifyContent: "space-between", // To position exit button
+    // elevation: 1, // Subtle shadow for items
   },
   bikeIcon: {
     marginRight: 15, // Space between icon and text
@@ -412,7 +525,9 @@ const styles = StyleSheet.create({
   bicycleTextContainer: {
     flex: 1, // Allow text to take remaining space
   },
-  bicycleId: {
+  bicycleInfoContainer: { // Renamed for clarity
+    flex: 1, // Takes up space before the exit button
+  },  bicycleId: {
     fontSize: 15,
     color: colors.textPrimary,
     // fontFamily: 'YourCustomFont-Regular', // Example: Apply custom font
@@ -527,5 +642,60 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: 5,
+  },
+  // --- Exit Button Styles ---
+  exitButton: {
+    backgroundColor: colors.secondary, // Teal accent
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10, // Space from the bicycle info
+    minHeight: 38, // Decent tap target
+  },
+  exitButtonText: {
+    color: colors.onSecondary, // Black text on Teal
+    fontSize: 14,
+    fontWeight: "bold",
+    marginLeft: 6,
+  },
+  // --- Exit Confirmation Modal Styles (can reuse/adapt from selection modal) ---
+  modalMessage: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 25, // More space before buttons
+    lineHeight: 22,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 10,
+  },
+  // Using existing modalButton, modalButtonText, cancelButton styles from above
+  // (assuming they are generic enough or defined in this file for the selection modal)
+  disabledButton: { // Style for disabled buttons
+    opacity: 0.7,
+  },
+  // --- Loading Overlay for Exit ---
+  loadingOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Semi-transparent dark overlay
+    zIndex: 1000, // Ensure it's on top
+  },
+  loadingOverlayText: {
+    marginTop: 10,
+    color: colors.white, // White text on dark overlay
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

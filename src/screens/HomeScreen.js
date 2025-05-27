@@ -104,8 +104,6 @@ export default function HomeScreen() {
     setBicycleToExitId(null);
   };
 
-
-
   // --- QR Code Scanning Logic ---
 
   const handleScanButtonPress = async () => {
@@ -224,26 +222,21 @@ export default function HomeScreen() {
     setIsExiting(true); // Start loading state
 
     try {
-      // const success = await exitBicycle(bicycleToExitId); // Actual API call
-      // Mocking the API call for demonstration:
-      console.log(`Simulating exit for bicycle: ${bicycleToExitId}`);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
-      const mockSuccess = true; // Assume success for this example
+      const result = await exitBicycle(bicycleToExitId); // Actual API call
 
-      if (mockSuccess) {
+      if (result.success) {
         Alert.alert(
           "Success",
-          `Bicycle ${bicycleToExitId} exited successfully.`
+          result.message || `Bicycle ${bicycleToExitId} exited successfully.`
         );
         await refreshUserData(); // Refresh user data to reflect the change
       } else {
         Alert.alert(
           "Exit Failed",
-          "Could not exit the bicycle. Please try again."
+          result.message || "Could not exit the bicycle. Please try again."
         );
       }
-    } catch (error)
-    {
+    } catch (error) {
       console.error("Exit bicycle error:", error);
       Alert.alert(
         "Error",
@@ -254,7 +247,6 @@ export default function HomeScreen() {
       setBicycleToExitId(null); // Clear the selected bicycle for exit
     }
   };
-
 
   return (
     <View style={styles.screenWrapper}>
@@ -400,7 +392,8 @@ export default function HomeScreen() {
             <Text style={styles.modalTitle}>Confirm Exit & Pay</Text>
             {bicycleToExitId && (
               <Text style={styles.modalMessage}>
-                Are you sure you want to proceed with payment and exit for Bicycle ID: {bicycleToExitId}?
+                Are you sure you want to proceed with payment and exit for
+                Bicycle ID: {bicycleToExitId}?
               </Text>
             )}
             <View style={styles.modalButtonContainer}>
@@ -412,11 +405,22 @@ export default function HomeScreen() {
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.secondary }, isExiting ? styles.disabledButton : {}]}
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: colors.secondary },
+                  isExiting ? styles.disabledButton : {},
+                ]}
                 onPress={handleConfirmExit}
                 disabled={isExiting}
               >
-                <Text style={[styles.modalButtonText, { color: colors.onSecondary }]}>Confirm & Pay</Text>
+                <Text
+                  style={[
+                    styles.modalButtonText,
+                    { color: colors.onSecondary },
+                  ]}
+                >
+                  Confirm & Pay
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -438,11 +442,13 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingBottom: 20, // Add padding at the bottom if using ScrollView
   },
-  screenWrapper: { // New wrapper for ScrollView and Overlay
+  screenWrapper: {
+    // New wrapper for ScrollView and Overlay
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollViewStyle: { // Style for scroll view itself
+  scrollViewStyle: {
+    // Style for scroll view itself
     flex: 1,
   },
   greeting: {
@@ -525,9 +531,11 @@ const styles = StyleSheet.create({
   bicycleTextContainer: {
     flex: 1, // Allow text to take remaining space
   },
-  bicycleInfoContainer: { // Renamed for clarity
+  bicycleInfoContainer: {
+    // Renamed for clarity
     flex: 1, // Takes up space before the exit button
-  },  bicycleId: {
+  },
+  bicycleId: {
     fontSize: 15,
     color: colors.textPrimary,
     // fontFamily: 'YourCustomFont-Regular', // Example: Apply custom font
@@ -665,37 +673,38 @@ const styles = StyleSheet.create({
   modalMessage: {
     fontSize: 16,
     color: colors.textPrimary,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 25, // More space before buttons
     lineHeight: 22,
   },
   modalButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
     marginTop: 10,
   },
   // Using existing modalButton, modalButtonText, cancelButton styles from above
   // (assuming they are generic enough or defined in this file for the selection modal)
-  disabledButton: { // Style for disabled buttons
+  disabledButton: {
+    // Style for disabled buttons
     opacity: 0.7,
   },
   // --- Loading Overlay for Exit ---
   loadingOverlay: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     top: 0,
     bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Semi-transparent dark overlay
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.4)", // Semi-transparent dark overlay
     zIndex: 1000, // Ensure it's on top
   },
   loadingOverlayText: {
     marginTop: 10,
     color: colors.white, // White text on dark overlay
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
